@@ -1,0 +1,966 @@
+---
+title: "Final Project"
+output:
+  html_document: default
+  pdf_document: default
+date: "2025-04-07"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+```
+
+## Load the dataset
+
+```{r}
+data <- read.csv("DATA.csv")
+```
+
+## EDA
+
+Selected Features: RIAGENDR, RIDAGEYR, Lifestyle(ALQ111, ALQ121, ALQ151, DBQ700 , DBQ197, DBD895, DBD905, DBD910, SMQ020)
+
+### NA checking
+
+```{r}
+sum(is.na(data))
+```
+
+### Univariate Analysis
+
+#### Age Distribution
+
+```{r}
+hist(data$RIDAGEYR,
+     main = "Distribution of Age",
+     xlab = "Age (Years)",
+     col = "skyblue",
+     border = "white")
+```
+
+#### Gender Distribution
+
+```{r}
+table(data$RIAGENDR)
+```
+
+#### Healthy Diet Distribution
+
+```{r}
+diet_health <- data$DBQ700
+diet_factor <- factor(diet_health,
+                      levels = 1:5,
+                      labels = c("Excellent", "Very good", "Good", "Fair", "Poor"),
+                      ordered = TRUE)
+diet_table <- table(diet_factor)
+barplot(diet_table,
+        col = "skyblue",
+        main = "How Healthy is the Diet?",
+        xlab = "Diet Quality",
+        ylab = "Number of People")
+```
+
+#### Milk Comsumption Distribution
+
+```{r}
+milk <- data$DBQ197
+milk_factor <- factor(milk,
+                      levels = 0:4,
+                      labels = c("Never", "Rarely", "Sometimes", "Oftened", "Varied"),
+                      ordered = TRUE)
+milk_table <- table(milk_factor)
+barplot(milk_table,
+        col = "skyblue",
+        main = "Past 30-day milk product consumption",
+        xlab = "Milk consumption",
+        ylab = "Number of People")
+```
+
+#### Not Home Prepared Meals Distribution
+
+```{r}
+p80 <- quantile(data$DBD895, 0.80, na.rm = TRUE)
+
+hist(data$DBD895,
+     breaks = 15,
+     main = "Distribution of # of Not Home Prepared Meals",
+     xlab = "# of meals",
+     col = "skyblue",
+     border = "white")
+
+abline(v = p80, col = "red", lwd = 2, lty = 2)
+
+text(p80, 20, labels = "80th percentile", pos = 4, col = "red")
+```
+
+```{r}
+table(data$DBD895)
+```
+
+#### Ready-to-eat foods Distribution
+
+```{r}
+p99 <- quantile(data$DBD905, 0.95, na.rm = TRUE)
+p80 <- quantile(data$DBD905, 0.85, na.rm = TRUE)
+hist(data$DBD905,
+     breaks = 30,
+     main = "Distribution of # of Ready-to-eat foods",
+     xlab = "# of foods",
+     col = "skyblue",
+     border = "white")
+abline(v = p99, col = "red", lwd = 2, lty = 2)
+abline(v = p80, col = "blue", lwd = 2, lty = 2)
+
+text(p99, 400, labels = paste0("99th percentile = ", round(p99)), pos = 4, col = "red")
+text(p80, 800, labels = paste0("80th percentile = ", round(p80, 2)), pos = 4, col = "blue")
+```
+
+```{r}
+table(data$DBD905)
+```
+
+#### Frozen meals Distribution
+
+```{r}
+p99 <- quantile(data$DBD910, 0.99, na.rm = TRUE)
+p85 <- quantile(data$DBD910, 0.85, na.rm = TRUE)
+hist(data$DBD910,
+     breaks = 30,
+     main = "Distribution of # of Frozen Meals",
+     xlab = "# of meals",
+     col = "skyblue",
+     border = "white")
+abline(v = p99, col = "red", lwd = 2, lty = 2)
+abline(v = p85, col = "blue", lwd = 2, lty = 2)
+
+text(p99, 400, labels = paste0("99th percentile = ", round(p99)), pos = 4, col = "red")
+text(p85, 800, labels = paste0("85th percentile = ", round(p85, 2)), pos = 4, col = "blue")
+```
+
+```{r}
+table(data$DBD910)
+```
+
+### Bivariate Analysis
+
+#### Depression rate across gender
+
+```{r}
+data$gender <- factor(data$RIAGENDR, labels = c("Male", "Female"))
+data$depressed <- factor(data$depressed, labels = c("Not Depressed", "Depressed"))
+
+ggplot(data, aes(x = gender, fill = depressed)) +
+  geom_bar(position = "fill") +
+  labs(
+    title = "Proportion of Depression by Gender",
+    x = "Gender",
+    y = "Proportion",
+    fill = "Depression Status"
+  ) +
+  scale_fill_manual(values = c("Not Depressed" = "skyblue", "Depressed" = "tomato")) +
+  theme_minimal()
+```
+
+```{r}
+prop.table(table(data$gender, data$depressed), margin = 1)
+```
+
+#### Depression rate across Age
+
+```{r}
+data$age_group <- cut(data$RIDAGEYR,
+                      breaks = seq(20, 90, by = 10),
+                      right = FALSE,
+                      labels = c("20-30", "30-40", "40-50", "50-60", "60-70", "70-80", "80-90"))
+
+data$depressed <- factor(data$depressed, labels = c("Not Depressed", "Depressed"))
+
+ggplot(data, aes(x = age_group, fill = depressed)) +
+  geom_bar(position = "fill") +
+  labs(
+    title = "Proportion of Depression by Age",
+    x = "Age",
+    y = "Proportion",
+    fill = "Depression Status"
+  ) +
+  scale_fill_manual(values = c("Not Depressed" = "skyblue", "Depressed" = "tomato")) +
+  theme_minimal()
+```
+
+```{r}
+prop.table(table(data$age_group, data$depressed), margin = 1)
+```
+
+#### Depression rate across Healthy Diet
+
+```{r}
+data$Diet <- factor(data$DBQ700, labels = c("Excellent", "Very good", "Good", "Fair", "Poor"))
+data$depressed <- factor(data$depressed, labels = c("Not Depressed", "Depressed"))
+
+ggplot(data, aes(x = Diet, fill = depressed)) +
+  geom_bar(position = "fill") +
+  labs(
+    title = "Proportion of Depression by Healthy Diet",
+    x = "Healthy Diet",
+    y = "Proportion",
+    fill = "Depression Status"
+  ) +
+  scale_fill_manual(values = c("Not Depressed" = "skyblue", "Depressed" = "tomato")) +
+  theme_minimal()
+```
+
+```{r}
+prop.table(table(data$Diet, data$depressed), margin = 1)
+```
+
+#### Depression rate across Milk
+
+```{r}
+data$Milk <- factor(data$DBQ197, labels = c("Never", "Rarely", "Sometimes", "Oftened", "Varied"))
+data$depressed <- factor(data$depressed, labels = c("Not Depressed", "Depressed"))
+
+ggplot(data, aes(x = Milk, fill = depressed)) +
+  geom_bar(position = "fill") +
+  labs(
+    title = "Proportion of Depression by Milk Consumption",
+    x = "Milk Consumption",
+    y = "Proportion",
+    fill = "Depression Status"
+  ) +
+  scale_fill_manual(values = c("Not Depressed" = "skyblue", "Depressed" = "tomato")) +
+  theme_minimal()
+```
+
+```{r}
+prop.table(table(data$Milk, data$depressed), margin = 1)
+```
+
+#### Depression rate across Not Home prepared meals
+
+```{r}
+data$meals_group <- cut(data$DBD895,
+                      breaks = c(0, 1, 2, 3, 4, 6, 22),
+                      labels = c("0", "1", "2", "3", "4-5", ">=6"),
+                      right = FALSE)
+table(data$meals_group)
+```
+
+```{r}
+data$depressed <- factor(data$depressed, labels = c("Not Depressed", "Depressed"))
+
+ggplot(data, aes(x = meals_group, fill = depressed)) +
+  geom_bar(position = "fill") +
+  labs(
+    title = "Proportion of Depression by Not Home prepared meals",
+    x = "# of Not Home prepared meals",
+    y = "Proportion",
+    fill = "Depression Status"
+  ) +
+  scale_fill_manual(values = c("Not Depressed" = "skyblue", "Depressed" = "tomato")) +
+  theme_minimal()
+```
+
+```{r}
+prop.table(table(data$meals_group, data$depressed), margin = 1)
+```
+
+#### Depression rate across Instant Foods
+
+```{r}
+data$foods_group <- cut(data$DBD905,
+                      breaks = c(0, 1, 3, 100),
+                      labels = c("0", "1-2", ">=3"),
+                      right = FALSE)
+table(data$foods_group)
+```
+
+```{r}
+data$depressed <- factor(data$depressed, labels = c("Not Depressed", "Depressed"))
+
+ggplot(data, aes(x = foods_group, fill = depressed)) +
+  geom_bar(position = "fill") +
+  labs(
+    title = "Proportion of Depression by Instant Foods",
+    x = "# of Instant Foods",
+    y = "Proportion",
+    fill = "Depression Status"
+  ) +
+  scale_fill_manual(values = c("Not Depressed" = "skyblue", "Depressed" = "tomato")) +
+  theme_minimal()
+```
+
+```{r}
+prop.table(table(data$foods_group, data$depressed), margin = 1)
+```
+
+#### Depression rate across frozen meals
+
+```{r}
+data$frozen_group <- cut(data$DBD910,
+                      breaks = c(0, 1, 4, 100),
+                      labels = c("0", "1-4", ">=4"),
+                      right = FALSE)
+table(data$frozen_group)
+```
+
+```{r}
+data$depressed <- factor(data$depressed, labels = c("Not Depressed", "Depressed"))
+
+ggplot(data, aes(x = frozen_group, fill = depressed)) +
+  geom_bar(position = "fill") +
+  labs(
+    title = "Proportion of Depression by Frozen Foods",
+    x = "# of Frozen Foods",
+    y = "Proportion",
+    fill = "Depression Status"
+  ) +
+  scale_fill_manual(values = c("Not Depressed" = "skyblue", "Depressed" = "tomato")) +
+  theme_minimal()
+```
+
+```{r}
+prop.table(table(data$frozen_group, data$depressed), margin = 1)
+```
+
+## Random Forest
+
+```{r}
+# Load libraries
+library(randomForest)
+library(caret)
+library(dplyr)
+library(ggplot2)
+library(pROC)
+library(caTools)
+```
+
+### Choosing variables
+
+```{r}
+data <- read.csv('DATA.csv')
+model_vars <- c("RIAGENDR", "RIDAGEYR", "ALQ111", "ALQ121", "ALQ151", 
+                "DBQ700", "DBQ197", "DBD895", "DBD905", "DBD910", 
+                "SMQ020", "depressed")
+model_data <- data[, model_vars]
+
+```
+
+### Handling missing values
+
+```{r}
+missing_values <- colSums(is.na(model_data))
+print(missing_values[missing_values > 0]) # No missing values
+```
+
+```{r}
+for (col in model_vars) {
+  if (is.factor(model_data[[col]]) || is.character(model_data[[col]])) {
+    # Convert to factor 
+    model_data[[col]] <- as.factor(model_data[[col]])
+    # Impute missing values with mode
+    if (sum(is.na(model_data[[col]])) > 0) {
+      mode_val <- names(sort(table(model_data[[col]], useNA = "no"), decreasing = TRUE))[1]
+      model_data[[col]][is.na(model_data[[col]])] <- mode_val
+    }
+  } else {
+    # For numerical variables (like age)
+    if (sum(is.na(model_data[[col]])) > 0) {
+      model_data[[col]][is.na(model_data[[col]])] <- median(model_data[[col]], na.rm = TRUE)
+    }
+  }
+}
+
+model_data$depressed <- as.factor(model_data$depressed)
+model_data$RIAGENDR <- as.factor(model_data$RIAGENDR)
+model_data$ALQ121 <- as.factor(model_data$ALQ121)
+model_data$ALQ151 <- as.factor(model_data$ALQ151)
+model_data$DBQ700 <- as.factor(model_data$DBQ700)
+model_data$DBQ197 <- as.factor(model_data$DBQ197)
+model_data$SMQ020 <- as.factor(model_data$SMQ020)
+
+
+```
+
+### Splitting data
+
+```{r}
+set.seed(42)
+sample_split <- sample.split(Y = model_data$depressed, SplitRatio = 0.7)
+train_set <- subset(x = model_data, sample_split == TRUE)
+test_set <- subset(x = model_data, sample_split == FALSE)
+print("Class distribution in training set:")
+print(table(train_set$depressed))
+print("Class distribution in test set:")
+print(table(test_set$depressed))
+
+```
+
+### Build Random Forest model
+
+```{r}
+# Buidling an initial RF model with imbalanced data
+
+rf_initial <- randomForest(
+  depressed ~ .,
+  data = train_set,
+  ntree = 500,
+  importance = TRUE
+)
+print(rf_initial)
+```
+
+```{r}
+initial_preds <- predict(rf_initial, test_set)
+initial_cm <- confusionMatrix(initial_preds, test_set$depressed, positive = '1')
+print("Initial model performance:")
+print(initial_cm)
+```
+
+### Feature Engineering
+
+```{r}
+train_set$depressed <- factor(train_set$depressed, levels = c(0, 1), labels = c("class0", "class1"))
+test_set$depressed <- factor(test_set$depressed, levels = c(0, 1), labels = c("class0", "class1"))
+
+# Recreate the train control with appropriate settings
+control <- trainControl(method = "cv", number = 10, 
+                        classProbs = TRUE, 
+                        summaryFunction = twoClassSummary)
+
+# Train the Random Forest model using cross-validation
+set.seed(42)
+rf_cv_model <- train(
+  depressed ~ .,
+  data = train_set,
+  method = "rf",
+  ntree = 500,
+  trControl = control,
+  metric = "ROC"
+)
+
+print(rf_cv_model)
+
+# Evaluate the model on the test set
+cv_preds <- predict(rf_cv_model, test_set)
+cv_cm <- confusionMatrix(cv_preds, test_set$depressed, positive = 'class1')
+print("Cross-validated model performance:")
+print(cv_cm)
+```
+
+```{r}
+library(ROSE)
+
+# Oversample the training data
+train_balanced <- ROSE(depressed ~ ., data = train_set, seed = 42)$data
+
+# Check the new class distribution
+print(table(train_balanced$depressed))
+
+# Train the Random Forest model using oversampled data
+set.seed(42)
+rf_balanced_model <- randomForest(
+  depressed ~ .,
+  data = train_balanced,
+  ntree = 1000,
+  mtry = 2,           
+  nodesize = 5,       
+  maxnodes = 80,
+  importance = TRUE
+)
+
+# Evaluate the model on the test set
+oversample_preds <- predict(rf_balanced_model, test_set)
+oversample_cm <- confusionMatrix(oversample_preds, test_set$depressed, positive = 'class1')
+print("Model performance after oversampling:")
+print(oversample_cm)
+```
+
+```{r}
+importance_vals <- importance(rf_balanced_model)
+feature_importance <- data.frame(Feature = rownames(importance_vals), 
+                                 Importance = importance_vals[, 'MeanDecreaseGini'])
+
+# Sort features by importance
+feature_importance <- feature_importance[order(-feature_importance$Importance), ]
+
+print(feature_importance)
+
+# Visualize feature importance
+ggplot(feature_importance, aes(x = reorder(Feature, Importance), y = Importance)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  coord_flip() +
+  labs(
+    title = "Feature Importance",
+    x = "Features",
+    y = "Importance (Mean Decrease Gini)"
+  ) +
+  theme_minimal()
+```
+
+## Gradient Boosting
+
+### Basic Model
+
+```{r}
+# install.packages("xgboost")
+# install.packages("caret")
+# install.packages("dplyr")
+library(gbm)
+library(caTools)
+library(dplyr)
+library(caret)
+```
+
+```{r}
+data <- read.csv("DATA.csv")
+
+table(data$depressed) 
+```
+
+```{r}
+features <- c("RIAGENDR", "RIDAGEYR", "ALQ121", "ALQ151",
+              "DBQ700", "DBQ197", "DBD895", "DBD905", "DBD910", "SMQ020")
+target <- "depressed"
+
+selected_columns <- c(features, target)
+
+new_data <- data[selected_columns]
+
+new_data$RIAGENDR <- as.factor(inference_data$RIAGENDR)
+# new_data$ALQ121 <- as.factor(inference_data$ALQ121)
+new_data$ALQ151 <- as.factor(inference_data$ALQ151)
+new_data$DBQ700 <- as.factor(inference_data$DBQ700)
+new_data$DBQ197 <- as.factor(inference_data$DBQ197)
+new_data$SMQ020 <- as.factor(inference_data$SMQ020)
+```
+
+```{r}
+set.seed(42)
+sample_split <- sample.split(Y = new_data$depressed, SplitRatio = 0.7)
+train_set <- subset(x = new_data, sample_split == TRUE)
+test_set <- subset(x = new_data, sample_split == FALSE)
+```
+
+```{r}
+set.seed(42)
+boost_mod <- gbm(
+depressed~.,
+data=train_set,
+distribution="bernoulli",
+n.trees=500,
+interaction.depth=4)
+summary(boost_mod)
+```
+
+```{r}
+boost_test_preds <- predict(boost_mod, newdata=test_set, n.trees=500, type = "response")
+gbm_pred_labels <- ifelse(boost_test_preds > 0.5, 1, 0)
+cm <- table(gbm_pred_labels,test_set$depressed)
+accuracy <- sum(diag(cm)) / sum(cm)
+print(accuracy)
+print(cm)
+```
+
+```{r}
+par(mfrow=c(1,3))
+plot(boost_mod, i="RIDAGEYR")
+plot(boost_mod, i="ALQ121")
+plot(boost_mod, i="DBQ700")
+```
+
+### Feature Engineering
+
+```{r}
+new_data$age_group <- cut(new_data$RIDAGEYR,
+                      breaks = seq(20, 90, by = 10),
+                      right = FALSE,
+                      labels = c("20-30", "30-40", "40-50", "50-60", "60-70", "70-80", "80-90"))
+new_data$meals_group <- cut(new_data$DBD895,
+                      breaks = c(0, 1, 2, 3, 4, 6, 22),
+                      labels = c("0", "1", "2", "3", "4-5", ">=6"),
+                      right = FALSE)
+new_data$foods_group <- cut(new_data$DBD905,
+                      breaks = c(0, 1, 3, 100),
+                      labels = c("0", "1-2", ">=3"),
+                      right = FALSE)
+new_data$frozen_group <- cut(new_data$DBD910,
+                      breaks = c(0, 1, 4, 100),
+                      labels = c("0", "1-4", ">=4"),
+                      right = FALSE)
+```
+
+```{r}
+new_data$age_group <- as.factor(new_data$age_group)
+new_data$meals_group <- as.factor(new_data$meals_group)
+new_data$foods_group <- as.factor(new_data$foods_group)
+new_data$frozen_group <- as.factor(new_data$frozen_group)
+
+new_data <- new_data %>%
+  select(-RIDAGEYR, -DBD895, -DBD905, -DBD910)
+```
+
+```{r}
+set.seed(42)
+sample_split <- sample.split(Y = new_data$depressed, SplitRatio = 0.7)
+train_set <- subset(x = new_data, sample_split == TRUE)
+test_set <- subset(x = new_data, sample_split == FALSE)
+```
+
+### Cross Validation
+
+```{r}
+depths_to_test <- 2:7
+
+shrinkage_to_test = c(0.01, 0.05, 0.1)
+
+results <- data.frame()
+
+for (d in depths_to_test) {
+  for (s in shrinkage_to_test) {
+    cat("Training with depth =", d, "and shrinkage =", s, "\n")
+    set.seed(42)
+    boost_mod <- gbm(
+      depressed ~ .,
+      data = train_set,
+      distribution = "bernoulli",
+      n.trees = 500,
+      interaction.depth = d,
+      shrinkage = s,
+      cv.folds = 5,
+      verbose = FALSE
+    )
+    
+    best_iter <- gbm.perf(boost_mod, method = "cv", plot.it = FALSE)
+    
+    # Use the cross-validated deviance (lower = better)
+    cv_deviance <- boost_mod$cv.error[best_iter]
+    
+    results <- rbind(results, data.frame(
+      depth = d,
+      shrinkage = s,
+      best_iter = best_iter,
+      cv_deviance = round(cv_deviance, 3)
+    ))
+  }
+}
+
+```
+
+```{r}
+results[order(results$cv_deviance), ]
+```
+
+```{r}
+library(ggplot2)
+
+ggplot(results, aes(x = factor(depth), y = cv_deviance, color = factor(shrinkage))) +
+  geom_point(size = 3) +
+  geom_line(aes(group = shrinkage)) +
+  labs(title = "GBM Deviance vs Tree Depth & Shrinkage",
+       x = "Tree Depth", y = "Deviance",
+       color = "Shrinkage") +
+  theme_minimal()
+```
+
+### Final Model
+
+```{r}
+results_sorted <- results[order(results$cv_deviance, results$best_iter), ]
+
+best_model_config <- results_sorted[1, ]
+print(best_model_config)
+```
+
+```{r}
+best_depth <- best_model_config$depth
+best_shrinkage <- best_model_config$shrinkage
+
+set.seed(42)
+final_model <- gbm(
+  depressed ~ .,
+  data = train_set,
+  distribution = "bernoulli",
+  n.trees = 500,
+  interaction.depth = best_depth,
+  shrinkage = best_shrinkage,
+  n.minobsinnode = 10,
+  cv.folds = 5
+)
+summary(final_model)
+best_iter <- gbm.perf(final_model, method = "cv")
+cat("Best number of trees:", best_iter, "\n")
+```
+
+```{r}
+boost_test_preds <- predict(final_model, newdata=test_set, n.trees=best_iter)
+gbm_pred_labels <- ifelse(boost_test_preds > 0.5, 1, 0)
+cm <- table(gbm_pred_labels,test_set$depressed)
+accuracy <- sum(diag(cm)) / sum(cm)
+print(accuracy)
+print(cm)
+```
+
+## AdaBoost
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(gbm)
+library(caTools)
+library(dplyr)
+```
+
+### Loading data
+
+```{r}
+data <- read.csv("DATA.csv")
+table(data$depressed)
+head(data)
+```
+
+### Train test split
+
+```{r}
+features <- c("RIAGENDR", "RIDAGEYR", "ALQ121", "ALQ151",
+              "DBQ700", "DBQ197", "DBD895", "DBD905", "DBD910", "SMQ020")
+target <- "depressed"
+
+selected_columns <- c(features, target)
+
+new_data <- data[selected_columns]
+
+new_data$RIAGENDR <- as.factor(inference_data$RIAGENDR)
+new_data$ALQ121 <- as.factor(inference_data$ALQ121)
+new_data$ALQ151 <- as.factor(inference_data$ALQ151)
+new_data$DBQ700 <- as.factor(inference_data$DBQ700)
+new_data$DBQ197 <- as.factor(inference_data$DBQ197)
+new_data$SMQ020 <- as.factor(inference_data$SMQ020)
+
+set.seed(42)
+trainind <- sample.split(new_data$depressed, SplitRatio = 0.7)
+train_set <- subset(new_data, trainind == TRUE)
+test_set <- subset(new_data, trainind == FALSE)
+```
+
+### Construct initial model
+
+```{r}
+adaboost_init <- gbm(
+depressed~.,
+data=train_set,
+distribution="adaboost",
+n.trees = 1000)
+summary(adaboost_init)
+```
+
+### Initial model performance in test set
+
+```{r}
+adaboost_test_probs <- predict(adaboost_init, newdata = test_set, n.trees=1000, type = "response")
+adaboost_test_preds <- ifelse(adaboost_test_probs > 0.5, 1, 0)
+accuracy <- mean(adaboost_test_preds == test_set$depressed)
+accuracy
+```
+
+### Feature Engineering (same as Gradient Boosting)
+
+```{r}
+new_data$age_group <- cut(new_data$RIDAGEYR,
+                      breaks = seq(20, 90, by = 10),
+                      right = FALSE,
+                      labels = c("20-30", "30-40", "40-50", "50-60", "60-70", "70-80", "80-90"))
+new_data$meals_group <- cut(new_data$DBD895,
+                      breaks = c(0, 1, 2, 3, 4, 6, 22),
+                      labels = c("0", "1", "2", "3", "4-5", ">=6"),
+                      right = FALSE)
+new_data$foods_group <- cut(new_data$DBD905,
+                      breaks = c(0, 1, 3, 100),
+                      labels = c("0", "1-2", ">=3"),
+                      right = FALSE)
+
+```
+
+```{r}
+new_data$age_group <- as.factor(new_data$age_group)
+new_data$meals_group <- as.factor(new_data$meals_group)
+new_data$foods_group <- as.factor(new_data$foods_group)
+
+new_data <- new_data %>%
+  select(-RIDAGEYR, -DBD895, -DBD905)
+```
+
+```{r}
+head(new_data)
+```
+
+### Update the training and testing sets
+
+```{r}
+set.seed(42)
+trainind <- sample.split(new_data$depressed, SplitRatio = 0.7)
+train_set <- subset(new_data, trainind == TRUE)
+test_set <- subset(new_data, trainind == FALSE)
+```
+
+### See the influence of feature engineering
+
+```{r}
+adaboost_init <- gbm(
+depressed~.,
+data=train_set,
+distribution="adaboost",
+n.trees = 1000)
+```
+
+```{r}
+adaboost_test_probs <- predict(adaboost_init, newdata = test_set, n.trees=1000, type = "response")
+adaboost_test_preds <- ifelse(adaboost_test_probs > 0.5, 1, 0)
+accuracy <- mean(adaboost_test_preds == test_set$depressed)
+accuracy
+```
+
+### cross-validation
+
+```{r}
+
+depths <- c(2:7)
+
+shrinkage <- c(0.01, 0.05, 0.1)
+
+results <- data.frame()
+
+for (d in depths) {
+  for (s in shrinkage) {
+    set.seed(42)
+    adaboost <- gbm(depressed ~ ., data = train_set, distribution = "adaboost",
+      n.trees = 1000,
+      interaction.depth = d,
+      shrinkage = s,    
+      cv.folds = 5,              
+      verbose = FALSE
+    )
+    iteration <- gbm.perf(adaboost, method = "cv", plot.it = FALSE)
+      
+    # Use the cross-validated deviance (lower = better)
+    cv_deviance <- adaboost$cv.error[iteration]
+    
+    results <- rbind(results, data.frame(
+      depth = d,
+      shrinkage = s,
+      best_iter = iteration,
+      cv_deviance = round(cv_deviance, 3)
+    ))
+    
+    
+  }
+}
+
+
+results[order(results$cv_deviance), ]
+```
+
+```{r}
+library(ggplot2)
+
+ggplot(results, aes(x = factor(depth), y = cv_deviance, color = factor(shrinkage))) +
+  geom_point(size = 3) +
+  geom_line(aes(group = shrinkage)) +
+  labs(title = "GBM Devience vs Tree Depth & Shrinkage",
+       x = "Tree Depth", y = "Devience",
+       color = "Shrinkage") +
+  theme_minimal()
+```
+
+### Final Model
+
+```{r}
+adaboost_final <- gbm(depressed ~ ., data = train_set, distribution = "adaboost",
+      n.trees = 103,
+      interaction.depth = 2,
+      shrinkage = 0.05,
+      cv.folds = 5,
+      verbose = FALSE
+    )
+```
+
+```{r}
+influence <- summary(adaboost_final, plotit = FALSE)
+influence <- influence[order(-influence$rel.inf),]
+influence
+```
+
+### Plot the importance
+
+```{r}
+#Note: I created a new plot because the built in plot from the summary does not display all feature names and is confusing.
+ggplot(influence, aes(x = reorder(var, -rel.inf), y = rel.inf)) + geom_bar(stat = "identity") + 
+  labs(x = "Feature", y = "Relative Importance")
+```
+
+### Performance of final model
+
+```{r}
+adaboost_test_probs <- predict(adaboost_init, newdata = test_set, n.trees=103, type = "response")
+adaboost_test_preds <- ifelse(adaboost_test_probs > 0.5, 1, 0)
+accuracy <- mean(adaboost_test_preds == test_set$depressed)
+accuracy 
+```
+
+## Inference Analysis
+
+```{r}
+data <- read.csv("DATA.csv")
+
+features <- c("RIAGENDR", "RIDAGEYR", "ALQ121", "ALQ151",
+              "DBQ700", "DBQ197", "DBD895", "DBD905", "DBD910", "SMQ020")
+target <- "depressed"
+
+selected_columns <- c(features, target)
+
+inference_data <- data[selected_columns]
+
+inference_data$RIAGENDR <- as.factor(inference_data$RIAGENDR)
+inference_data$ALQ151 <- as.factor(inference_data$ALQ151)
+inference_data$DBQ700 <- as.factor(inference_data$DBQ700)
+inference_data$DBQ197 <- as.factor(inference_data$DBQ197)
+inference_data$SMQ020 <- as.factor(inference_data$SMQ020)
+
+model <- glm(depressed ~ ., data = inference_data, family = binomial)
+summary(model)
+```
+
+```{r}
+# Odds ratios
+exp(coef(model))
+
+# 95% Confidence intervals for the odds ratios
+exp(confint(model))
+```
+
+```{r}
+# install.packages("ggplot2")
+# install.packages("broom") 
+library(ggplot2)
+library(broom)
+```
+
+```{r}
+tidy_model <- tidy(model, exponentiate = TRUE, conf.int = TRUE)
+
+tidy_model <- tidy_model[!is.na(tidy_model$estimate), ]
+
+# Plot
+ggplot(tidy_model, aes(x = reorder(term, estimate), y = estimate)) +
+  geom_point(size = 3, color = "steelblue") +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "gray") +
+  coord_flip() +
+  labs(
+    title = "Odds Ratios with 95% Confidence Intervals",
+    x = "Predictor",
+    y = "Odds Ratio (Exp(Coef))"
+  ) +
+  theme_minimal()
+
+```
